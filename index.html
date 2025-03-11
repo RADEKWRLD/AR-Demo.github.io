@@ -1,116 +1,141 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AR.js Interactive App</title>
+    <title>AR.js Interactive Game</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ar.js@latest/aframe/build/aframe-ar.min.js"></script>
-
-    <script>
-        AFRAME.registerComponent('gesture-handler', {
-            init() {
-                const model = this.el;
-                const rotationSpeed = 0.005;
-                let lastX = 0;
-                let pinchStartDistance = 0;
-                const initialScale = model.getAttribute('scale');
-                const sound = document.getElementById('sound');
-
-                const getDistance = (t1, t2) => {
-                    const dx = t1.clientX - t2.clientX;
-                    const dy = t1.clientY - t2.clientY;
-                    return Math.sqrt(dx * dx + dy * dy);
-                };
-
-                model.addEventListener('click', () => {
-                    if (!sound) return;
-                    sound.currentTime = 0;
-                    sound.play().catch(() => {});
-                });
-
-                document.addEventListener('touchstart', e => {
-                    if (e.touches.length === 2) {
-                        pinchStartDistance = getDistance(e.touches[0], e.touches[1]);
-                    }
-                    if (e.touches.length === 1) {
-                        lastX = e.touches[0].clientX;
-                    }
-                });
-
-                document.addEventListener('touchmove', e => {
-                    if (e.touches.length === 2) {
-                        const currentDistance = getDistance(e.touches[0], e.touches[1]);
-                        const scaleFactor = currentDistance / pinchStartDistance;
-                        model.setAttribute('scale', {
-                            x: initialScale.x * scaleFactor,
-                            y: initialScale.y * scaleFactor,
-                            z: initialScale.z * scaleFactor
-                        });
-                    }
-                    if (e.touches.length === 1) {
-                        const deltaX = e.touches[0].clientX - lastX;
-                        model.object3D.rotation.y += deltaX * rotationSpeed;
-                        lastX = e.touches[0].clientX;
-                    }
-                });
-            }
-        });
-    </script>
     <style>
-        #loading {
+        #scoreboard {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        #timer {
+            position: fixed;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        #start-button {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 24px;
-            color: #fff;
-            z-index: 1000;
-        }
-
-        #loading::after {
-            content: '';
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 4px solid #fff;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            font-size: 20px;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body style="margin: 0; overflow: hidden;">
-    <div id="loading">Loading...</div> 
-
+    <div id="scoreboard">Score: 0</div>
+    <div id="timer">Time: 30</div>
+    <button id="start-button">Start Game</button>
+    
     <a-scene embedded arjs>
         <a-assets>
             <audio id="sound" src="assets/clickSound.mp3"></audio>
         </a-assets>
 
         <a-marker type="pattern" url="assets/pattern-images.patt">
-            <a-entity id="model" gltf-model="assets/yellow_duck.glb" position="0 -0.5 0" scale="0.5 0.5 0.5"
-                rotate-in-place="speed: 1">
-            </a-entity>
-        </a-marker>
-
-        <a-marker preset="hiro">
-            <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
-            <a-sphere animation="property: object3D.position.y; to: 2.2; dir: alternate; dur: 2000; loop: true"
-                position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
-            <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
-            <a-plane position="0 0 -4" rotation="-90 0 0" width="4" height="4" color="#7BC8A4"></a-plane>
+            <a-entity id="model" gltf-model="assets/yellow_duck.glb" position="0 -0.5 0" scale="0.5 0.5 0.5"></a-entity>
         </a-marker>
 
         <a-camera position="0 0 0"></a-camera>
     </a-scene>
 
     <script>
-        document.querySelector('a-scene').addEventListener('loaded', () => {
-            document.getElementById('loading').style.display = 'none';
+        let score = 0;
+        let timeLeft = 30;
+        let gameActive = false;
+
+        const model = document.getElementById("model");
+        const scoreDisplay = document.getElementById("scoreboard");
+        const timerDisplay = document.getElementById("timer");
+        const startButton = document.getElementById("start-button");
+        const sound = document.getElementById("sound");
+
+        function startGame() {
+            gameActive = true;
+            score = 0;
+            timeLeft = 30;
+            scoreDisplay.innerText = "Score: 0";
+            timerDisplay.innerText = "Time: 30";
+            scoreDisplay.style.display = "block";
+            timerDisplay.style.display = "block";
+            startButton.style.display = "none";
+            startTimer();
+            moveDuck();
+        }
+
+        function updateScore() {
+            if (!gameActive) return;
+            score += 10;
+            scoreDisplay.innerText = `Score: ${score}`;
+            if (score % 50 === 0) {
+                increaseDifficulty();
+            }
+        }
+
+        function moveDuck() {
+            if (!gameActive) return;
+            const newX = (Math.random() - 0.5) * 2;
+            const newY = (Math.random() * 0.5) - 0.5;
+            const newZ = (Math.random() - 0.5) * 2;
+            model.setAttribute("position", `${newX} ${newY} ${newZ}`);
+        }
+
+        function increaseDifficulty() {
+            setInterval(moveDuck, Math.max(500 - score * 5, 200));
+        }
+
+        model.addEventListener("click", () => {
+            if (!gameActive) return;
+            updateScore();
+            moveDuck();
+            sound.currentTime = 0;
+            sound.play().catch(() => {});
+            model.setAttribute("animation", "property: position; to: 0 0.5 0; dur: 200; easing: easeOutQuad;");
+            setTimeout(() => model.setAttribute("position", "0 -0.5 0"), 200);
+        });
+
+        function startTimer() {
+            const timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    timerDisplay.innerText = `Time: ${timeLeft}`;
+                } else {
+                    clearInterval(timerInterval);
+                    gameActive = false;
+                    alert(`Game Over! Final Score: ${score}`);
+                    startButton.style.display = "block";
+                }
+            }, 1000);
+        }
+
+        startButton.addEventListener("click", startGame);
+
+        model.addEventListener("model-loaded", () => {
+            startButton.style.display = "block";
         });
     </script>
 </body>
