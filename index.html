@@ -42,7 +42,7 @@
   <a-assets>
     <a-asset-item
       id="bowser"
-      src="https://cdn.glitch.com/06bd98b4-97ee-4c07-a546-fe39ca205034%2Fbowser.glb"
+      src="./assets/yellow_duck.glb"
     >
     </a-asset-item>
   </a-assets>
@@ -58,7 +58,7 @@
       id="bowser-model"
       gltf-model="#bowser"
       position="0 0 0"
-      scale="0.05 0.05 0.05"
+      scale="0.5 0.5 0.5"
       class="clickable"
       gesture-handler
     >
@@ -70,7 +70,7 @@
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       const hint = document.querySelector(".gesture-hint");
-      const marker = document.querySelector("#custom-marker");
+      const marker = document.querySelector("#markerA");
 
       // 监听 marker 出现事件
       marker.addEventListener("markerFound", function () {
