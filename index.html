@@ -16,6 +16,7 @@
             padding: 10px;
             border-radius: 5px;
             display: none;
+            z-index: 10;
         }
 
         #timer {
@@ -29,6 +30,7 @@
             padding: 10px;
             border-radius: 5px;
             display: none;
+            z-index: 10;
         }
 
         #start-button {
@@ -43,6 +45,8 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            display: none;
+            z-index: 20;
         }
     </style>
 </head>
@@ -51,30 +55,34 @@
     <div id="timer">Time: 30</div>
     <button id="start-button">Start Game</button>
     
-    <a-scene embedded arjs>
+    <a-scene embedded arjs cursor="rayOrigin: mouse">
         <a-assets>
             <audio id="sound" src="assets/clickSound.mp3"></audio>
         </a-assets>
 
-        <a-marker type="pattern" url="assets/pattern-images.patt">
-            <a-entity id="model" gltf-model="assets/yellow_duck.glb" position="0 -0.5 0" scale="0.5 0.5 0.5"></a-entity>
+        <a-marker id="marker" type="pattern" url="assets/pattern-images.patt">
+            <a-entity id="model" gltf-model="assets/yellow_duck.glb" position="0 -0.5 0" scale="0.5 0.5 0.5"
+                gesture-detector="enabled: false" class="clickable"></a-entity>
         </a-marker>
 
-        <a-camera position="0 0 0"></a-camera>
+        <a-camera position="0 0 0" raycaster="objects: .clickable"></a-camera>
     </a-scene>
 
     <script>
         let score = 0;
         let timeLeft = 30;
         let gameActive = false;
+        let moveInterval;
 
         const model = document.getElementById("model");
         const scoreDisplay = document.getElementById("scoreboard");
         const timerDisplay = document.getElementById("timer");
         const startButton = document.getElementById("start-button");
         const sound = document.getElementById("sound");
+        const marker = document.getElementById("marker");
 
         function startGame() {
+            if (!marker.object3D.visible) return;
             gameActive = true;
             score = 0;
             timeLeft = 30;
@@ -85,15 +93,13 @@
             startButton.style.display = "none";
             startTimer();
             moveDuck();
+            moveInterval = setInterval(moveDuck, 1000);
         }
 
         function updateScore() {
             if (!gameActive) return;
             score += 10;
             scoreDisplay.innerText = `Score: ${score}`;
-            if (score % 50 === 0) {
-                increaseDifficulty();
-            }
         }
 
         function moveDuck() {
@@ -104,18 +110,12 @@
             model.setAttribute("position", `${newX} ${newY} ${newZ}`);
         }
 
-        function increaseDifficulty() {
-            setInterval(moveDuck, Math.max(500 - score * 5, 200));
-        }
-
-        model.addEventListener("click", () => {
+        model.addEventListener("raycaster-intersected", () => {
             if (!gameActive) return;
             updateScore();
             moveDuck();
             sound.currentTime = 0;
             sound.play().catch(() => {});
-            model.setAttribute("animation", "property: position; to: 0 0.5 0; dur: 200; easing: easeOutQuad;");
-            setTimeout(() => model.setAttribute("position", "0 -0.5 0"), 200);
         });
 
         function startTimer() {
@@ -125,6 +125,7 @@
                     timerDisplay.innerText = `Time: ${timeLeft}`;
                 } else {
                     clearInterval(timerInterval);
+                    clearInterval(moveInterval);
                     gameActive = false;
                     alert(`Game Over! Final Score: ${score}`);
                     startButton.style.display = "block";
@@ -132,11 +133,15 @@
             }, 1000);
         }
 
-        startButton.addEventListener("click", startGame);
-
-        model.addEventListener("model-loaded", () => {
+        marker.addEventListener("markerFound", () => {
             startButton.style.display = "block";
         });
+
+        marker.addEventListener("markerLost", () => {
+            startButton.style.display = "none";
+        });
+
+        startButton.addEventListener("click", startGame);
     </script>
 </body>
 </html>
