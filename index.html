@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>AR.js Interactive App</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/3.3.2/aframe/build/aframe-ar.js"></script>
+</head>
+
+<body style="margin: 0; overflow: hidden;">
+    <a-scene embedded arjs>
+        <a-assets>
+            <audio id="sound" src="assets/clickSound.mp3"></audio>
+        </a-assets>
+        <a-marker type="pattern" url="assets/pattern-images.patt">
+            <a-entity id="model"
+                gltf-model="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models/2.0/Duck/glTF/Duck.gltf"
+                position="0 0 0" scale="0.5 0.5 0.5"
+                gesture-handler>
+            </a-entity>
+        </a-marker>
+
+        <a-camera position="0 0 0"></a-camera>
+    </a-scene>
+
+    <script>
+        AFRAME.registerComponent('gesture-handler', {
+          init: function () {
+            let model = this.el;
+            let initialScale = model.getAttribute('scale');
+            let pinchStartDistance = 0;
+            let lastRotation = 0;
+    
+            model.addEventListener('click', function () {
+              let sound = document.querySelector('#sound');
+              sound.play();
+            });
+    
+            document.addEventListener('touchstart', (event) => {
+              if (event.touches.length === 2) {
+                pinchStartDistance = getDistance(event.touches[0], event.touches[1]);
+              }
+            });
+    
+            document.addEventListener('touchmove', (event) => {
+              if (event.touches.length === 2) {
+                let newDistance = getDistance(event.touches[0], event.touches[1]);
+                let scaleFactor = newDistance / pinchStartDistance;
+                model.setAttribute('scale', {
+                  x: initialScale.x * scaleFactor,
+                  y: initialScale.y * scaleFactor,
+                  z: initialScale.z * scaleFactor,
+                });
+              }
+              if (event.touches.length === 1) {
+                let deltaX = event.touches[0].clientX - lastRotation;
+                model.object3D.rotation.y += deltaX * 0.01;
+                lastRotation = event.touches[0].clientX;
+              }
+            });
+          }
+        });
+    
+        function getDistance(touch1, touch2) {
+          let dx = touch1.clientX - touch2.clientX;
+          let dy = touch1.clientY - touch2.clientY;
+          return Math.sqrt(dx * dx + dy * dy);
+        }
+      </script>
+</body>
+
+</html>
