@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <!-- 添加 A-Frame 和 AR.js 核心库 -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <script src="./gestures.js"></script>
   <style>
     .gesture-hint {
       position: fixed;
@@ -23,203 +24,45 @@
   </style>
 </head>
 
-<script>
-  // 缩放控制组件（使用鼠标滚轮）
-  AFRAME.registerComponent('zoom-controls', {
-    schema: {
-      min: { type: "number", default: 5 },
-      max: { type: "number", default: 120 }
-    },
-    init: function () {
-      let self = this;
-      self.camera = document.querySelector("#camera");
-      window.addEventListener("wheel", event => {
-        let amount = Math.sign(event.deltaY) * -2;
-        let fov = Number(self.camera.getAttribute('camera').fov);
-        let adjust = fov + amount;
-        adjust = Math.min(Math.max(adjust, self.data.min), self.data.max);
-        
-        self.camera.setAttribute('camera', 'fov', adjust);
-      });
-    }
-  });
-
-  // 手势控制组件
-  AFRAME.registerComponent('gesture-handler', {
-    schema: {
-      minScale: { default: 0.1 },
-      maxScale: { default: 3 }
-    },
-    init: function() {
-      // 模型显示调试日志
-      this.el.addEventListener('model-loaded', () => {
-        console.log('模型已加载');
-      });
-    
-      this.el.sceneEl.addEventListener('markerFound', () => {
-        this.isMarkerVisible = true;
-        console.log('标记已识别');
-        document.querySelector('.gesture-hint').style.display = 'block';
-        setTimeout(() => {
-          document.querySelector('.gesture-hint').style.display = 'none';
-        }, 5000);
-      });
-      
-      this.el.sceneEl.addEventListener('markerLost', () => {
-        this.isMarkerVisible = false;
-        console.log('标记已丢失');
-        document.querySelector('.gesture-hint').style.display = 'none';
-      });
-      
-      this.initialScale = this.el.getAttribute('scale');
-      this.scaleFactor = 1;
-      
-      this.rotationFactor = { x: 0, y: 0 };
-      this.rotation = { x: 0, y: 0, z: 0 };
-      
-      this.touchCount = 0;
-      this.startX = 0;
-      this.startY = 0;
-      
-      // 触摸开始事件
-      document.addEventListener('touchstart', e => {
-        e.preventDefault();
-        this.touchCount = e.touches.length;
-        
-        if (this.isMarkerVisible) {
-          // 单指触摸 - 准备旋转
-          if (e.touches.length === 1) {
-            this.startX = e.touches[0].pageX;
-            this.startY = e.touches[0].pageY;
-            this.rotationStart = Object.assign({}, this.rotation);
-          }
-          // 双指触摸 - 准备缩放
-          else if (e.touches.length === 2) {
-            this.pinchStart = this.getDistance(e.touches[0], e.touches[1]);
-            this.initialScale = Object.assign({}, this.el.getAttribute('scale'));
-          }
-        }
-      });
-      
-      // 触摸移动事件
-      document.addEventListener('touchmove', e => {
-        e.preventDefault();
-        
-        if (this.isMarkerVisible) {
-          // 单指旋转
-          if (e.touches.length === 1 && this.touchCount === 1) {
-            const dx = e.touches[0].pageX - this.startX;
-            const dy = e.touches[0].pageY - this.startY;
-            
-            // 水平移动控制Y轴旋转
-            this.rotation.y = this.rotationStart.y + (dx * 0.5);
-            // 垂直移动控制X轴旋转
-            this.rotation.x = this.rotationStart.x + (dy * 0.5);
-            
-            this.el.setAttribute('rotation', `${this.rotation.x} ${this.rotation.y} ${this.rotation.z}`);
-          }
-          // 双指缩放
-          else if (e.touches.length === 2 && this.touchCount === 2) {
-            const pinchEnd = this.getDistance(e.touches[0], e.touches[1]);
-            this.scaleFactor = pinchEnd / this.pinchStart;
-            
-            const newScale = {
-              x: this.initialScale.x * this.scaleFactor,
-              y: this.initialScale.y * this.scaleFactor,
-              z: this.initialScale.z * this.scaleFactor
-            };
-            
-            // 设置最小和最大缩放比例
-            if (newScale.x > this.data.minScale && newScale.x < this.data.maxScale) {
-              this.el.setAttribute('scale', `${newScale.x} ${newScale.y} ${newScale.z}`);
-            }
-          }
-        }
-      });
-      
-      // 触摸结束事件
-      document.addEventListener('touchend', e => {
-        // 如果所有手指都抬起，重置触摸计数
-        if (e.touches.length === 0) {
-          this.touchCount = 0;
-        }
-      });
-      
-      // 添加双击重置功能
-      let lastTap = 0;
-      document.addEventListener('touchend', e => {
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTap;
-        if (tapLength < 300 && tapLength > 0 && e.touches.length === 0 && this.isMarkerVisible) {
-          this.resetModel();
-        }
-        lastTap = currentTime;
-      });
-    },
-    
-    getDistance: function(p1, p2) {
-      const dx = p1.pageX - p2.pageX;
-      const dy = p1.pageY - p2.pageY;
-      return Math.sqrt(dx * dx + dy * dy);
-    },
-    
-    resetModel: function() {
-      // 重置到初始比例和旋转
-      this.el.setAttribute('scale', '0.5 0.5 0.5');
-      this.el.setAttribute('rotation', '0 0 0');
-      this.rotation = { x: 0, y: 0, z: 0 };
-    }
-  });
-
-  // 页面加载完成后检查资源状态
-  document.addEventListener('DOMContentLoaded', () => {
-    const duckModel = document.querySelector('#duck-model');
-    duckModel.addEventListener('error', (e) => {
-      console.error('模型加载失败:', e);
-    });
-  });
-</script>
 
 <body style='margin: 0px; overflow: hidden;'>
   <div class="gesture-hint">
     单指拖动：旋转模型<br>
     双指捏合：缩放模型<br>
-    双击屏幕：重置模型
   </div>
 
-  <a-scene 
-    embedded 
-    arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: true;"
-    cursor="rayOrigin: mouse"
-    vr-mode-ui="enabled: false"
-  >
+  <a-scene arjs embedded renderer="logarithmicDepthBuffer: true;" vr-mode-ui="enabled: false" gesture-detector
+    id="scene">
     <a-assets>
       <a-asset-item id="duck-model" src="assets/yellow_duck.glb"></a-asset-item>
     </a-assets>
+    <a-entity camera></a-entity>
 
-    <a-entity 
-      id="camera"
-      camera="fov: 100"
-      wasd-controls
-      look-controls="pointerLockEnabled: false"
-      zoom-controls="min: 5; max: 140"
-      position="0 1.6 0"
-    ></a-entity>
-
-    <a-marker 
-      type="pattern"
-      url="assets/pattern-marker.patt"
-      id="custom-marker"
-      registerevents
-    >
-      <a-entity 
-        id="model-container"
-        position="0 0 0"
-        scale="0.5 0.5 0.5"
-        gltf-model="#duck-model"
-        gesture-handler="minScale: 0.1; maxScale: 3"
-      ></a-entity>
+    <a-marker type="pattern" url="assets/pattern-images.patt" id="custom-marker" registerevents>
+      <a-entity id="model-container" position="0 0 0" scale="0.5 0.5 0.5" gltf-model="#duck-model"
+        gesture-handler></a-entity>
     </a-marker>
   </a-scene>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const hint = document.querySelector(".gesture-hint");
+      const marker = document.querySelector("#custom-marker");
+
+      // 监听 marker 出现事件
+      marker.addEventListener("markerFound", function () {
+        hint.style.display = "block"; // 显示提示
+        setTimeout(() => {
+          hint.style.display = "none"; // 3 秒后隐藏
+        }, 3000);
+      });
+
+      // 监听 marker 消失事件（如果希望模型消失时隐藏提示）
+      marker.addEventListener("markerLost", function () {
+        hint.style.display = "none";
+      });
+    });
+  </script>
 </body>
+
 </html>
