@@ -1,131 +1,153 @@
 <!doctype html>
 <html>
-    <head>
-        <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
-        <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-        <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
-        <script>
-           AFRAME.registerComponent('pinch-scale', {
-    schema: {
-        min: {type: 'number', default: 0.1},
-        max: {type: 'number', default: 5},
-        scaleFactor: {type: 'number', default: 1}
-    },
-    
-    init: function() {
-        this.initialScale = this.el.object3D.scale.clone();
-        this.currentScale = this.initialScale.clone();
-        // 绑定事件处理函数
-        this.handleTouchStart = this.handleTouchStart.bind(this);
-        this.handleTouchMove = this.handleTouchMove.bind(this);
-        this.handleTouchEnd = this.handleTouchEnd.bind(this);
-        // 添加事件监听器
-        this.el.sceneEl.addEventListener('touchstart', this.handleTouchStart);
-        this.el.sceneEl.addEventListener('touchmove', this.handleTouchMove);
-        this.el.sceneEl.addEventListener('touchend', this.handleTouchEnd);
-        this.el.sceneEl.addEventListener('touchcancel', this.handleTouchEnd);
-    },
-    
-    remove: function() {
-        // 移除事件监听器以防止内存泄漏
-        this.el.sceneEl.removeEventListener('touchstart', this.handleTouchStart);
-        this.el.sceneEl.removeEventListener('touchmove', this.handleTouchMove);
-        this.el.sceneEl.removeEventListener('touchend', this.handleTouchEnd);
-        this.el.sceneEl.removeEventListener('touchcancel', this.handleTouchEnd);
-    },
+<head>
+    <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
+    <script>
+        AFRAME.registerComponent('pinch-scale', {
+            schema: { min: { default: 0.1 }, max: { default: 5 }, scaleFactor: { default: 1.5 } },
+            
+            init() {
+                this.initialScale = this.el.object3D.scale.clone();
+                this.currentScale = this.initialScale.clone();
+                this.isPinching = false;
+                this.bindMethods();
+                this.addListeners();
+            },
 
-    handleTouchStart: function(event) {
-        if (event.touches.length === 2) {
-            event.preventDefault();
-            // 存储初始触摸距离
-            this.initialDistance = this.calculateDistance(
-                event.touches[0],
-                event.touches[1]
-            );
-            // 标记正在进行缩放操作
-            this.isPinching = true;
-        }
-    },
+            bindMethods() {
+                this.handleTouchStart = this.handleTouchStart.bind(this);
+                this.handleTouchMove = this.handleTouchMove.bind(this);
+                this.handleTouchEnd = this.handleTouchEnd.bind(this);
+            },
 
-    handleTouchMove: function(event) {
-        if (this.isPinching && event.touches.length === 2) {
-            event.preventDefault();
-            // 计算当前触摸距离
-            const currentDistance = this.calculateDistance(
-                event.touches[0],
-                event.touches[1]
-            );
-            // 计算比例因子，并应用额外的缩放因子使缩放更平滑
-            const scaleDelta = (currentDistance / this.initialDistance) * this.data.scaleFactor;
-            // 应用缩放
-            const newScale = this.currentScale.clone().multiplyScalar(scaleDelta);
-            // 限制缩放范围
-            newScale.x = Math.min(Math.max(newScale.x, this.data.min), this.data.max);
-            newScale.y = Math.min(Math.max(newScale.y, this.data.min), this.data.max);
-            newScale.z = Math.min(Math.max(newScale.z, this.data.min), this.data.max);
-            // 应用新的缩放比例
-            this.el.object3D.scale.copy(newScale);
-            // 更新初始距离，使缩放更平滑
-            this.initialDistance = currentDistance;
-        }
-    },
-    
-    handleTouchEnd: function(event) {
-        if (event.touches.length < 2) {
-            this.isPinching = false;
-            this.currentScale = this.el.object3D.scale.clone();
-        }
-    },
+            addListeners() {
+                const scene = this.el.sceneEl;
+                scene.addEventListener('touchstart', this.handleTouchStart);
+                scene.addEventListener('touchmove', this.handleTouchMove);
+                scene.addEventListener('touchend', this.handleTouchEnd);
+            },
 
-    calculateDistance: function(touch1, touch2) {
-        return Math.hypot(
-            touch2.pageX - touch1.pageX,
-            touch2.pageY - touch1.pageY
-        );
-    }
-});
-        </script>
-    </head>
+            removeListeners() {
+                const scene = this.el.sceneEl;
+                scene.removeEventListener('touchstart', this.handleTouchStart);
+                scene.removeEventListener('touchmove', this.handleTouchMove);
+                scene.removeEventListener('touchend', this.handleTouchEnd);
+            },
 
-    <body style="margin: 0; overflow: hidden;">
-        <a-scene
-            vr-mode-ui="enabled: false;"
-            loading-screen="enabled: false;"
-            renderer="logarithmicDepthBuffer: true;"
-            arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
-            id="scene"
-            embedded
-            gesture-detector
-        >
-            <a-assets>
-                <a-asset-item
-                    id="animated-asset"
-                    src="assets/yellow_duck.glb"
-                ></a-asset-item>
-            </a-assets>
+            remove() { this.removeListeners(); },
 
-            <a-marker
-                id="animated-marker"
-                type="pattern"
-                preset="custom"
-                url="assets/pattern-images.patt"
-                raycaster="objects: .clickable"
-                emitevents="true"
-                cursor="fuse: false; rayOrigin: mouse;"
-                id="markerA"
-            >
-                <a-entity
-                    id="bowser-model"
-                    scale="0.6117697205357051 0.6117697205357051 0.6117697205357051"
-                    animation-mixer="loop: repeat"
-                    gltf-model="#animated-asset"
-                    class="clickable"
-                    gesture-handler
-                    pinch-scale="min: 0.1; max: 5; scaleFactor: 1.5"
-                ></a-entity>
-            </a-marker>
+            handleTouchStart(event) {
+                if (event.touches.length === 2) {
+                    this.isPinching = true;
+                    this.initialDistance = this.getDistance(event.touches[0], event.touches[1]);
+                }
+            },
 
-            <a-entity camera></a-entity>
-        </a-scene>
-    </body>
+            handleTouchMove(event) {
+                if (this.isPinching && event.touches.length === 2) {
+                    const newDistance = this.getDistance(event.touches[0], event.touches[1]);
+                    const scaleRatio = (newDistance / this.initialDistance) * this.data.scaleFactor;
+                    const newScale = this.currentScale.clone().multiplyScalar(scaleRatio);
+
+                    ['x', 'y', 'z'].forEach(axis => {
+                        newScale[axis] = Math.min(Math.max(newScale[axis], this.data.min), this.data.max);
+                    });
+                    
+                    this.el.object3D.scale.copy(newScale);
+                    this.initialDistance = newDistance;
+                }
+            },
+
+            handleTouchEnd() {
+                this.isPinching = false;
+                this.currentScale.copy(this.el.object3D.scale);
+            },
+
+            getDistance(touch1, touch2) {
+                return Math.hypot(touch2.pageX - touch1.pageX, touch2.pageY - touch1.pageY);
+            }
+        });
+
+        AFRAME.registerComponent('model-rotate', {
+            schema: { rotationSpeed: { default: 1.5 } },
+            
+            init() {
+                this.currentRotation = { x: 0, y: 0 };
+                this.initialRotation = this.el.object3D.rotation.clone();
+                this.isRotating = false;
+                this.bindMethods();
+                this.addListeners();
+            },
+
+            bindMethods() {
+                this.handleTouchStart = this.handleTouchStart.bind(this);
+                this.handleTouchMove = this.handleTouchMove.bind(this);
+                this.handleTouchEnd = this.handleTouchEnd.bind(this);
+            },
+
+            addListeners() {
+                const scene = this.el.sceneEl;
+                scene.addEventListener('touchstart', this.handleTouchStart);
+                scene.addEventListener('touchmove', this.handleTouchMove);
+                scene.addEventListener('touchend', this.handleTouchEnd);
+            },
+
+            removeListeners() {
+                const scene = this.el.sceneEl;
+                scene.removeEventListener('touchstart', this.handleTouchStart);
+                scene.removeEventListener('touchmove', this.handleTouchMove);
+                scene.removeEventListener('touchend', this.handleTouchEnd);
+            },
+
+            remove() { this.removeListeners(); },
+
+            handleTouchStart(event) {
+                if (event.touches.length === 1) {
+                    this.isRotating = true;
+                    this.startX = event.touches[0].pageX;
+                    this.startY = event.touches[0].pageY;
+                }
+            },
+
+            handleTouchMove(event) {
+                if (this.isRotating && event.touches.length === 1) {
+                    const touch = event.touches[0];
+                    this.currentRotation.y += (touch.pageX - this.startX) * 0.01 * this.data.rotationSpeed;
+                    this.currentRotation.x += (touch.pageY - this.startY) * 0.01 * this.data.rotationSpeed;
+                    this.applyRotation();
+                    this.startX = touch.pageX;
+                    this.startY = touch.pageY;
+                }
+            },
+
+            handleTouchEnd() { this.isRotating = false; },
+
+            applyRotation() {
+                this.el.object3D.rotation.set(
+                    this.initialRotation.x + this.currentRotation.x,
+                    this.initialRotation.y + this.currentRotation.y,
+                    this.initialRotation.z
+                );
+            }
+        });
+    </script>
+</head>
+<body style="margin: 0; overflow: hidden;">
+    <a-scene vr-mode-ui="enabled: false;" loading-screen="enabled: false;" renderer="logarithmicDepthBuffer: true;"
+        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;" embedded>
+        <a-assets>
+            <a-asset-item id="animated-asset" src="assets/yellow_duck.glb"></a-asset-item>
+        </a-assets>
+
+        <a-marker preset="custom" url="assets/pattern-images.patt">
+            <a-entity gltf-model="#animated-asset" class="clickable"
+                pinch-scale="min: 0.1; max: 5; scaleFactor: 1.5"
+                model-rotate="rotationSpeed: 1.5"></a-entity>
+        </a-marker>
+
+        <a-entity camera></a-entity>
+    </a-scene>
+</body>
 </html>
