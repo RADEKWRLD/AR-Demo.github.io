@@ -4,8 +4,57 @@
         <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
         <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
         <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
-        <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
-        <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
+        <script>
+            AFRAME.registerComponent('pinch-scale', {
+                init: function() {
+                    this.initialScale = this.el.object3D.scale.clone();
+                    this.scaleFactor = 1;
+                    
+                    this.handleTouchStart = this.handleTouchStart.bind(this);
+                    this.handleTouchMove = this.handleTouchMove.bind(this);
+                    
+                    this.el.sceneEl.addEventListener('touchstart', this.handleTouchStart);
+                    this.el.sceneEl.addEventListener('touchmove', this.handleTouchMove);
+                },
+
+                handleTouchStart: function(event) {
+                    if (event.touches.length === 2) {
+                        event.preventDefault();
+                        this.initialDistance = this.calculateDistance(
+                            event.touches[0],
+                            event.touches[1]
+                        );
+                    }
+                },
+
+                handleTouchMove: function(event) {
+                    if (event.touches.length === 2) {
+                        event.preventDefault();
+                        const currentDistance = this.calculateDistance(
+                            event.touches[0],
+                            event.touches[1]
+                        );
+                        
+                        this.scaleFactor = currentDistance / this.initialDistance;
+                        const newScale = this.initialScale
+                            .clone()
+                            .multiplyScalar(this.scaleFactor);
+                        newScale.x = Math.min(Math.max(newScale.x, 0.1), 5);
+                        newScale.y = Math.min(Math.max(newScale.y, 0.1), 5);
+                        newScale.z = Math.min(Math.max(newScale.z, 0.1), 5);
+                        
+                        this.el.object3D.scale.copy(newScale);
+                    }
+                },
+
+                calculateDistance: function(touch1, touch2) {
+                    return Math.hypot(
+                        touch2.pageX - touch1.pageX,
+                        touch2.pageY - touch1.pageY
+                    );
+                }
+            });
+        </script>
     </head>
 
     <body style="margin: 0; overflow: hidden;">
@@ -42,6 +91,7 @@
                     gltf-model="#animated-asset"
                     class="clickable"
                     gesture-handler
+                    pinch-scale 
                 ></a-entity>
             </a-marker>
 
