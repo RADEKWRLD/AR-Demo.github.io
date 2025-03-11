@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <title>AR.js Interactive App</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
@@ -9,56 +8,84 @@
     <script>
         AFRAME.registerComponent('gesture-handler', {
             init() {
-                const model = this.el
-                const rotationSpeed = 0.005
-                let lastX = 0
-                let pinchStartDistance = 0
-                const initialScale = model.getAttribute('scale')
-                const sound = document.getElementById('sound')
+                const model = this.el;
+                const rotationSpeed = 0.005;
+                let lastX = 0;
+                let pinchStartDistance = 0;
+                const initialScale = model.getAttribute('scale');
+                const sound = document.getElementById('sound');
 
                 const getDistance = (t1, t2) => {
-                    const dx = t1.clientX - t2.clientX
-                    const dy = t1.clientY - t2.clientY
-                    return Math.sqrt(dx * dx + dy * dy)
-                }
+                    const dx = t1.clientX - t2.clientX;
+                    const dy = t1.clientY - t2.clientY;
+                    return Math.sqrt(dx * dx + dy * dy);
+                };
 
                 model.addEventListener('click', () => {
-                    if (!sound) return
-                    sound.currentTime = 0
-                    sound.play().catch(() => {})
-                })
+                    if (!sound) return;
+                    sound.currentTime = 0;
+                    sound.play().catch(() => {});
+                });
 
                 document.addEventListener('touchstart', e => {
                     if (e.touches.length === 2) {
-                        pinchStartDistance = getDistance(e.touches[0], e.touches[1])
+                        pinchStartDistance = getDistance(e.touches[0], e.touches[1]);
                     }
                     if (e.touches.length === 1) {
-                        lastX = e.touches[0].clientX
+                        lastX = e.touches[0].clientX;
                     }
-                })
+                });
 
                 document.addEventListener('touchmove', e => {
                     if (e.touches.length === 2) {
-                        const currentDistance = getDistance(e.touches[0], e.touches[1])
-                        const scaleFactor = currentDistance / pinchStartDistance
+                        const currentDistance = getDistance(e.touches[0], e.touches[1]);
+                        const scaleFactor = currentDistance / pinchStartDistance;
                         model.setAttribute('scale', {
                             x: initialScale.x * scaleFactor,
                             y: initialScale.y * scaleFactor,
                             z: initialScale.z * scaleFactor
-                        })
+                        });
                     }
                     if (e.touches.length === 1) {
-                        const deltaX = e.touches[0].clientX - lastX
-                        model.object3D.rotation.y += deltaX * rotationSpeed
-                        lastX = e.touches[0].clientX
+                        const deltaX = e.touches[0].clientX - lastX;
+                        model.object3D.rotation.y += deltaX * rotationSpeed;
+                        lastX = e.touches[0].clientX;
                     }
-                })
+                });
             }
-        })
+        });
     </script>
-</head>
+    <style>
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #fff;
+            z-index: 1000;
+        }
 
+        #loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 4px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
 <body style="margin: 0; overflow: hidden;">
+    <div id="loading">Loading...</div> 
+
     <a-scene embedded arjs>
         <a-assets>
             <audio id="sound" src="assets/clickSound.mp3"></audio>
@@ -72,13 +99,19 @@
 
         <a-marker preset="hiro">
             <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
-            <a-sphere  animation="property: object3D.position.y; to: 2.2; dir: alternate; dur: 2000; loop: true" position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
+            <a-sphere animation="property: object3D.position.y; to: 2.2; dir: alternate; dur: 2000; loop: true"
+                position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
             <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
             <a-plane position="0 0 -4" rotation="-90 0 0" width="4" height="4" color="#7BC8A4"></a-plane>
         </a-marker>
 
         <a-camera position="0 0 0"></a-camera>
     </a-scene>
-</body>
 
+    <script>
+        document.querySelector('a-scene').addEventListener('loaded', () => {
+            document.getElementById('loading').style.display = 'none';
+        });
+    </script>
+</body>
 </html>
