@@ -8,44 +8,53 @@
 
     <script>
         AFRAME.registerComponent('gesture-handler', {
-            init: function () {
-                let model = this.el;
-                let initialScale = model.getAttribute('scale');
-                let pinchStartDistance = 0;
-                let lastRotation = 0;
+            init() {
+                const model = this.el
+                const rotationSpeed = 0.005
+                let lastX = 0
+                let pinchStartDistance = 0
+                const initialScale = model.getAttribute('scale')
+                const sound = document.getElementById('sound')
 
+                const getDistance = (t1, t2) => {
+                    const dx = t1.clientX - t2.clientX
+                    const dy = t1.clientY - t2.clientY
+                    return Math.sqrt(dx * dx + dy * dy)
+                }
 
-                model.addEventListener('click', function () {
-                    if (sound) {
-                        sound.currentTime = 0;
-                        sound.play().catch(error => {
-                            console.warn("音频播放失败：", error);
-                        });
-                    } else {
-                        console.warn("找不到音频元素！");
-                    }
-                });
-                document.addEventListener('touchstart', (event) => {
-                    if (event.touches.length === 1) {
-                        lastX = event.touches[0].clientX;
-                    }
-                });
+                model.addEventListener('click', () => {
+                    if (!sound) return
+                    sound.currentTime = 0
+                    sound.play().catch(() => {})
+                })
 
-                document.addEventListener('touchmove', (event) => {
-                    if (event.touches.length === 1) {
-                        let deltaX = event.touches[0].clientX - lastX;
-                        model.object3D.rotation.y += deltaX * rotationSpeed;
-                        lastX = event.touches[0].clientX;
+                document.addEventListener('touchstart', e => {
+                    if (e.touches.length === 2) {
+                        pinchStartDistance = getDistance(e.touches[0], e.touches[1])
                     }
-                });
+                    if (e.touches.length === 1) {
+                        lastX = e.touches[0].clientX
+                    }
+                })
+
+                document.addEventListener('touchmove', e => {
+                    if (e.touches.length === 2) {
+                        const currentDistance = getDistance(e.touches[0], e.touches[1])
+                        const scaleFactor = currentDistance / pinchStartDistance
+                        model.setAttribute('scale', {
+                            x: initialScale.x * scaleFactor,
+                            y: initialScale.y * scaleFactor,
+                            z: initialScale.z * scaleFactor
+                        })
+                    }
+                    if (e.touches.length === 1) {
+                        const deltaX = e.touches[0].clientX - lastX
+                        model.object3D.rotation.y += deltaX * rotationSpeed
+                        lastX = e.touches[0].clientX
+                    }
+                })
             }
-        });
-
-        function getDistance(touch1, touch2) {
-            let dx = touch1.clientX - touch2.clientX;
-            let dy = touch1.clientY - touch2.clientY;
-            return Math.sqrt(dx * dx + dy * dy);
-        }
+        })
     </script>
 </head>
 
@@ -59,6 +68,13 @@
             <a-entity id="model" gltf-model="assets/yellow_duck.glb" position="0 -0.5 0" scale="0.5 0.5 0.5"
                 rotate-in-place="speed: 1">
             </a-entity>
+        </a-marker>
+
+        <a-marker preset="hiro">
+            <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
+            <a-sphere  animation="property: object3D.position.y; to: 2.2; dir: alternate; dur: 2000; loop: true" position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
+            <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
+            <a-plane position="0 0 -4" rotation="-90 0 0" width="4" height="4" color="#7BC8A4"></a-plane>
         </a-marker>
 
         <a-camera position="0 0 0"></a-camera>
