@@ -24,7 +24,6 @@
   </style>
 </head>
 
-
 <body style='margin: 0px; overflow: hidden;'>
   <div class="gesture-hint">
     单指拖动：旋转模型<br>
@@ -32,57 +31,75 @@
   </div>
 
   <a-scene
-  arjs
-  embedded
-  renderer="logarithmicDepthBuffer: true;"
-  vr-mode-ui="enabled: false"
-  gesture-detector
-  id="scene"
->
-  <a-assets>
-    <a-asset-item
-      id="bowser"
-      src="./assets/yellow_duck.glb"
-    >
-    </a-asset-item>
-  </a-assets>
-
-  <a-marker
-    preset="hiro"
-    raycaster="objects: .clickable"
-    emitevents="true"
-    cursor="fuse: false; rayOrigin: mouse;"
-    id="markerA"
+    arjs
+    embedded
+    renderer="logarithmicDepthBuffer: true;"
+    vr-mode-ui="enabled: false"
+    gesture-detector
+    id="scene"
   >
-    <a-entity
-      id="bowser-model"
-      gltf-model="#bowser"
-      position="0 0 0"
-      scale="0.5 0.5 0.5"
-      class="clickable"
-      gesture-handler
+    <a-assets>
+      <a-asset-item id="model1" src="./assets/yellow_duck.glb"></a-asset-item>
+      <a-asset-item id="model2" src="./assets/iphone.glb"></a-asset-item>
+    </a-assets>
+
+    <!-- Marker A - 显示黄色小鸭 -->
+    <a-marker
+      type="pattern"
+      url="assets/pattern-markerA.patt"
+      raycaster="objects: .clickable"
+      emitevents="true"
+      cursor="fuse: false; rayOrigin: mouse;"
+      id="markerA"
     >
-    </a-entity>
-  </a-marker>
-  <a-entity camera></a-entity>
-</a-scene>
+      <a-entity
+        gltf-model="#model1"
+        position="0 0 0"
+        scale="0.5 0.5 0.5"
+        class="clickable"
+        gesture-handler
+      >
+      </a-entity>
+    </a-marker>
+
+    <!-- Marker B - 显示 iPhone -->
+    <a-marker
+      type="pattern"
+      url="assets/pattern-markerB.patt"
+      raycaster="objects: .clickable"
+      emitevents="true"
+      cursor="fuse: false; rayOrigin: mouse;"
+      id="markerB"
+    >
+      <a-entity
+        gltf-model="#model2"
+        position="0 0 0"
+        scale="0.5 0.5 0.5"
+        class="clickable"
+        gesture-handler
+      >
+      </a-entity>
+    </a-marker>
+
+    <a-entity camera></a-entity>
+  </a-scene>
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       const hint = document.querySelector(".gesture-hint");
-      const marker = document.querySelector("#markerA");
+      const markers = document.querySelectorAll("a-marker");
 
-      // 监听 marker 出现事件
-      marker.addEventListener("markerFound", function () {
-        hint.style.display = "block"; // 显示提示
-        setTimeout(() => {
-          hint.style.display = "none"; // 3 秒后隐藏
-        }, 3000);
-      });
+      markers.forEach(marker => {
+        marker.addEventListener("markerFound", function () {
+          hint.style.display = "block";
+          setTimeout(() => {
+            hint.style.display = "none";
+          }, 5000);
+        });
 
-      // 监听 marker 消失事件（如果希望模型消失时隐藏提示）
-      marker.addEventListener("markerLost", function () {
-        hint.style.display = "none";
+        marker.addEventListener("markerLost", function () {
+          hint.style.display = "none";
+        });
       });
     });
   </script>
